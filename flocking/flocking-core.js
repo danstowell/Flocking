@@ -64,9 +64,7 @@ var flock = flock || {};
             constant: 1
         },        
         tableSize: 8192,
-        bufferSize: flock.platform.os.indexOf("Linux") > -1 ||
-            (flock.platform.os === "Win32" && flock.platform.browser.mozilla) ?
-            8192 : 2048
+        bufferSize: flock.platform.os.indexOf("Linux") > -1 ? 8192 : 2048
     });
     
     flock.idIdx = 0;
