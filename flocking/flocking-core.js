@@ -66,7 +66,7 @@ var flock = flock || {};
         tableSize: 8192,
         bufferSize: flock.platform.os.indexOf("Linux") > -1 ||
             (flock.platform.os === "Win32" && flock.platform.browser.mozilla) ?
-            4096 : 2048
+            8192 : 2048
     });
     
     flock.idIdx = 0;
@@ -884,7 +884,7 @@ var flock = flock || {};
      */
     flock.enviro.moz = function (that) {
         that.audioEl = new Audio();
-        that.model.callbackRate = (that.audioSettings.bufferSize / that.audioSettings.rates.audio ) * 1000;
+        that.model.callbackRate = Math.floor((that.audioSettings.bufferSize / that.audioSettings.rates.audio ) * 1000);
         that.audioEl.mozSetup(that.audioSettings.chans, that.audioSettings.rates.audio);
         
         that.startGeneratingSamples = function () {
