@@ -840,13 +840,13 @@ var flock = flock || {};
     };
     
     /**
-     * Generates an interleaved audio buffer from the output unit generator for the specified
-     * 'needed' number of samples. If number of needed samples isn't divisble by the control rate,
-     * the output buffer's size will be rounded up to the nearest control period.
+     * Generates an interleaved audio buffer from the source buffers. 
+     * If the output buffer size isn't divisble by the control rate,
+     * it will be rounded down to the nearest block size.
      *
-     * @param {Number} needed the number of samples to generate
+     * @param {Array} outBuf the output buffer to write into
      * @param {Function} evalFn a function to invoke when writing each buffer
-     * @param {Array} an array of buffers to write
+     * @param {Array} sourceBufs an array of buffers to interleave and write out
      * @param {Object} audioSettings the current audio system settings
      * @return a channel-interleaved output buffer containing roughly the number of needed samples
      */
@@ -884,32 +884,25 @@ var flock = flock || {};
      */
     flock.enviro.moz = function (that) {
         that.audioEl = new Audio();
-        that.model.writeInterval = 1;
-        that.model.sampleOverflow = -(that.audioSettings.bufferSize * 4);
+        that.model.callbackRate = (that.audioSettings.bufferSize / that.audioSettings.rates.audio ) * 1000;
         that.audioEl.mozSetup(that.audioSettings.chans, that.audioSettings.rates.audio);
         
         that.startGeneratingSamples = function () {
             if (that.scheduled) {
                 return;
             }
-            that.asyncScheduler.repeat(that.model.writeInterval, that.writeSamples);
+            that.asyncScheduler.repeat(that.model.callbackRate, that.writeSamples);
             that.scheduled = true;
         };
         
         that.writeSamples = function () {
             var playState = that.model.playState,
                 currentOffset = that.audioEl.mozCurrentSampleOffset(),
-                needed = currentOffset - playState.written,
                 outBuf;
-            
-            if (needed < that.model.sampleOverflow || that.nodes.length < 1) {
-                return;
-            }
             
             outBuf = new Float32Array(that.audioSettings.bufferSize * that.audioSettings.chans);
             flock.interleavedDemandWriter(outBuf, that.gen, that.buses, that.audioSettings);
             playState.written += that.audioEl.mozWriteAudio(outBuf);
-            
             if (playState.written >= playState.total) {
                 that.stop();
             }
