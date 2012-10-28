@@ -65,12 +65,8 @@ var flock = flock || {};
         },        
         tableSize: 8192,
         
-        // This buffer size determines the overall latency of Flocking's audio output. On Firefox, it will be 2x.
+        // This buffer size determines the overall latency of Flocking's audio output.
         bufferSize: flock.platform.os.indexOf("Linux") > -1 ? 8192 : 2048
-        /*
-        bufferSize: (flock.platform.os === "Win32" && flock.platform.browser.mozilla) ?
-            16384: 4096
-        */
     });
     
     flock.idIdx = 0;
