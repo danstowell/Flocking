@@ -64,7 +64,13 @@ var flock = flock || {};
             constant: 1
         },        
         tableSize: 8192,
+        
+        // This buffer size determines the overall latency of Flocking's audio output. On Firefox, it will be 2x.
         bufferSize: flock.platform.os.indexOf("Linux") > -1 ? 8192 : 2048
+        /*
+        bufferSize: (flock.platform.os === "Win32" && flock.platform.browser.mozilla) ?
+            16384: 4096
+        */
     });
     
     flock.idIdx = 0;
@@ -848,11 +854,9 @@ var flock = flock || {};
      * @param {Object} audioSettings the current audio system settings
      * @return a channel-interleaved output buffer containing roughly the number of needed samples
      */
-    flock.interleavedDemandWriter = function (outBuf, evalFn, sourceBufs, audioSettings) {
+    flock.interleavedWriter = function (outBuf, evalFn, sourceBufs, audioSettings) {
         var kr = audioSettings.rates.control,
             chans = audioSettings.chans,
-            // Figure out how many control periods worth of samples to generate.
-            // This means that we could conceivably write slightly more or less than needed.
             numKRBufs = audioSettings.bufferSize / kr,
             i,
             chan,
@@ -884,6 +888,7 @@ var flock = flock || {};
         that.audioEl = new Audio();
         that.model.callbackRate = Math.floor((that.audioSettings.bufferSize / that.audioSettings.rates.audio ) * 1000);
         that.audioEl.mozSetup(that.audioSettings.chans, that.audioSettings.rates.audio);
+        that.outBuffer = new Float32Array(that.audioSettings.bufferSize * that.audioSettings.chans);
         
         that.startGeneratingSamples = function () {
             if (that.scheduled) {
@@ -895,11 +900,9 @@ var flock = flock || {};
         
         that.writeSamples = function () {
             var playState = that.model.playState,
-                currentOffset = that.audioEl.mozCurrentSampleOffset(),
-                outBuf;
+                outBuf = that.outBuffer;
             
-            outBuf = new Float32Array(that.audioSettings.bufferSize * that.audioSettings.chans);
-            flock.interleavedDemandWriter(outBuf, that.gen, that.buses, that.audioSettings);
+            flock.interleavedWriter(outBuf, that.gen, that.buses, that.audioSettings);
             playState.written += that.audioEl.mozWriteAudio(outBuf);
             if (playState.written >= playState.total) {
                 that.stop();
