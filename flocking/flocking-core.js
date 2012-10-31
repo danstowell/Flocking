@@ -65,8 +65,8 @@ var flock = flock || {};
         },        
         tableSize: 8192,
         
-        // This buffer size determines the overall latency of Flocking's audio output.
-        bufferSize: flock.platform.os.indexOf("Linux") > -1 ? 8192 : 2048
+        // This buffer size determines the overall latency of Flocking's audio output; on Firefox, this value is 2x.
+        bufferSize: flock.platform.os.indexOf("Linux") > -1 ? 4096 : 2048
     });
     
     flock.idIdx = 0;
@@ -840,7 +840,7 @@ var flock = flock || {};
     };
     
     /**
-     * Generates an interleaved audio buffer from the source buffers. 
+     * Generates an interleaved audio buffer from the source buffers.
      * If the output buffer size isn't divisble by the control rate,
      * it will be rounded down to the nearest block size.
      *
@@ -850,10 +850,10 @@ var flock = flock || {};
      * @param {Object} audioSettings the current audio system settings
      * @return a channel-interleaved output buffer containing roughly the number of needed samples
      */
-    flock.interleavedWriter = function (outBuf, evalFn, sourceBufs, audioSettings) {
+    flock.interleavedDemandWriter = function (outBuf, evalFn, sourceBufs, audioSettings) {
         var kr = audioSettings.rates.control,
             chans = audioSettings.chans,
-            numKRBufs = audioSettings.bufferSize / kr,
+            numKRBufs = audioSettings.bufferSize / kr, // TODO: This should be calculated only once.
             i,
             chan,
             samp;
@@ -882,24 +882,48 @@ var flock = flock || {};
      */
     flock.enviro.moz = function (that) {
         that.audioEl = new Audio();
-        that.model.callbackRate = Math.floor((that.audioSettings.bufferSize / that.audioSettings.rates.audio ) * 1000);
+        that.model.bufferDur = (that.audioSettings.bufferSize / that.audioSettings.rates.audio ) * 1000
+        that.model.sampleDur = (1 / that.audioSettings.rates.audio) * 1000;
+        that.model.queuePollInterval = Math.ceil(that.model.bufferDur / 20);
         that.audioEl.mozSetup(that.audioSettings.chans, that.audioSettings.rates.audio);
         that.outBuffer = new Float32Array(that.audioSettings.bufferSize * that.audioSettings.chans);
+        that.clock = window.performance || window.Date;
         
         that.startGeneratingSamples = function () {
             if (that.scheduled) {
                 return;
             }
-            that.asyncScheduler.repeat(that.model.callbackRate, that.writeSamples);
+            that.asyncScheduler.repeat(that.model.queuePollInterval, that.writeSamples);
             that.scheduled = true;
+            that.model.lastReadTime = null;
+            that.model.samplesQueued = 0;
         };
         
         that.writeSamples = function () {
             var playState = that.model.playState,
-                outBuf = that.outBuffer;
+                outBuf = that.outBuffer,
+                now = that.clock.now(),
+                bufSize = that.audioSettings.bufferSize,
+                timeSinceLastRead,
+                samplesRead;
             
-            flock.interleavedWriter(outBuf, that.gen, that.buses, that.audioSettings);
+            // TODO: Can we ditch this conditional?
+            if (that.model.lastReadTime) {
+                timeSinceLastRead = now - that.model.lastReadTime;
+                samplesRead = timeSinceLastRead / that.model.sampleDur;
+                that.model.samplesQueued -= samplesRead;
+            }
+            
+            that.model.lastReadTime = now;
+            
+            if (that.model.samplesQueued > bufSize || that.nodes.length < 1) {
+                return;
+            }
+            
+            outBuf = flock.interleavedDemandWriter(outBuf, that.gen, that.buses, that.audioSettings);
             playState.written += that.audioEl.mozWriteAudio(outBuf);
+            that.model.samplesQueued += bufSize;
+            
             if (playState.written >= playState.total) {
                 that.stop();
             }
