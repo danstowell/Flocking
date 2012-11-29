@@ -845,10 +845,10 @@ var flock = flock || {};
      * it will be rounded down to the nearest block size.
      *
      * @param {Array} outBuf the output buffer to write into
-     * @param {Function} evalFn a function to invoke when writing each buffer
-     * @param {Array} sourceBufs an array of buffers to interleave and write out
+     * @param {Function} evalFn a function to invoke before writing each control block
+     * @param {Array} sourceBufs the array of channel buffers to interleave and write out
      * @param {Object} audioSettings the current audio system settings
-     * @return a channel-interleaved output buffer containing roughly the number of needed samples
+     * @return a channel-interleaved output buffer
      */
     flock.interleavedDemandWriter = function (outBuf, evalFn, sourceBufs, audioSettings) {
         var kr = audioSettings.rates.control,
