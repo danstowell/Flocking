@@ -39,6 +39,7 @@
         <!-- Scope View area for visualizing the demos -->
         <div id="scopeArea">
             <button class="playButton paused">Play</button>
+            <button class="refreshButton">Refresh</button>
             <div id="gfxContainer">
                 <div>Waveform</div>
                 <canvas id="gfx" height="50" width="640"></canvas>
@@ -118,23 +119,23 @@
         
         <!-- start of sample codes -->
         <script type="application/flocking" id="amp_mod">
-// Create a new synth consisting of a sine wave, 
-// modulating its amplitude slowly with another sine wave.
 var synth = flock.synth({
     synthDef: {
-        id: "carrier",
-        ugen: "flock.ugen.sinOsc",
-        freq: 440,
-        mul: {
-            id: "mod",
+        id: "reverb",
+        ugen: "flock.ugen.freeverb",
+        source: {
+            id: "source",
             ugen: "flock.ugen.sinOsc",
-            rate: "control",
-            freq: 1.0,
-            mul: 0.25
+            freq: {
+                    id: "mod",
+                    ugen: "flock.ugen.sinOsc",
+                    freq: 2,
+                    mul: 1000,
+                    add: 1500
+            }
         }
     }
-});
-        </script>
+});        </script>
 
         <script type="application/flocking" id="freq_mod">
 //Frequency Modulation (FM) Synthesis Demo

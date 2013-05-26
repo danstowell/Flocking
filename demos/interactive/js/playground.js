@@ -51,6 +51,13 @@ var demo = demo || {};
     			flock.enviro.shared.reset();
     		}
         });
+        that.refreshButton.click(function (e) {
+    		if (flock.enviro.shared.model.isPlaying) {
+    			flock.enviro.shared.reset();
+    		        eval(that.editor.getSession().getValue());
+    			flock.enviro.shared.play();
+    		}
+        });
     };
     
     var setupLoadControls = function (that) {
@@ -63,6 +70,7 @@ var demo = demo || {};
     demo.liveEditorView = function (editorId, selectors) {
         selectors = selectors || {
             playButton: ".playButton",
+            refreshButton: ".refreshButton",
             loadButton: "#load-button",
             demosMenu: "#sample_code_sel"
         };
@@ -71,6 +79,7 @@ var demo = demo || {};
             editor: null,
             isPlaying: false,
             playButton: $(selectors.playButton),
+            refreshButton: $(selectors.refreshButton),
             selectors: selectors
         };
         
